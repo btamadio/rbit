@@ -1,0 +1,36 @@
+name: Ingest
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        script-arg: ["dispatch", "p5_min", "predispatch"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run
+        run: |
+          CURRENT_TIME=$(TZ="Etc/GMT-10" date +"%Y-%m-%d %H:%M:%S")
+          python scripts/ingest_nem.py "${{ matrix.script-arg }}" "$CURRENT_TIME"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}

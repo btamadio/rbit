@@ -19,16 +19,10 @@ DISPATCH = "dispatch"
 P5_MIN = "p5_min"
 PREDISPATCH = "predispatch"
 
-URLS_CURRENT = {
-    DISPATCH: "https://www.nemweb.com.au/Reports/CURRENT/DispatchIS_Reports",
-    P5_MIN: "https://www.nemweb.com.au/Reports/CURRENT/P5_Reports",
-    PREDISPATCH: "https://www.nemweb.com.au/Reports/CURRENT/PredispatchIS_Reports",
-}
-
-URLS_ARCHIVE = {
-    DISPATCH: "https://www.nemweb.com.au/Reports/ARCHIVE/DispatchIS_Reports",
-    P5_MIN: "https://www.nemweb.com.au/Reports/ARCHIVE/P5_Reports",
-    PREDISPATCH: "https://www.nemweb.com.au/Reports/ARCHIVE/PredispatchIS_Reports",
+URLS = {
+    DISPATCH: "https://www.nemweb.com.au/Reports/{archive_or_current}/DispatchIS_Reports",
+    P5_MIN: "https://www.nemweb.com.au/Reports/{archive_or_current}/P5_Reports",
+    PREDISPATCH: "https://www.nemweb.com.au/Reports/{archive_or_current}/PredispatchIS_Reports",
 }
 
 

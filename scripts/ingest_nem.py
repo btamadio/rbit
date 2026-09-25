@@ -13,6 +13,12 @@ if __name__ == "__main__":
         "report_name", choices=[nem.DISPATCH, nem.P5_MIN, nem.PREDISPATCH]
     )
     parser.add_argument("current_time", type=datetime.datetime.fromisoformat)
+    parser.add_argument(
+        "--lookback",
+        type=int,
+        default=1,
+        help="hours before current time to look for files",
+    )
     parser.add_argument("--out", help="output path for outputting csv file")
     args = parser.parse_args()
 
@@ -32,7 +38,7 @@ if __name__ == "__main__":
         zf
         for zf in zip_files
         if args.current_time - nem.parse_datetime_from_filename(zf)
-        < datetime.timedelta(minutes=30)
+        < datetime.timedelta(hours=args.lookback)
     ]
 
     if not zip_files:

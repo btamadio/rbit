@@ -30,7 +30,7 @@ jobs:
       - name: Run
         run: |
           CURRENT_TIME=$(TZ="Etc/GMT-10" date +"%Y-%m-%d %H:%M:%S")
-          python scripts/ingest_nem.py "${{ matrix.script-arg }}" "$CURRENT_TIME"
+          python scripts/ingest_nem.py "${{ matrix.script-arg }}" "$CURRENT_TIME" --lookback=1
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}

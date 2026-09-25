@@ -1,9 +1,11 @@
 __pycache__/
+.*cache
+.branches/
 .cache/
 .ipynb_checkpoints/
+.temp
+*.egg-info/
 /data/
 /models/
 /runs/
-.*cache
-*.egg-info/
-.temp
+/notebooks/

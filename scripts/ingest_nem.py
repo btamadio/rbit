@@ -44,9 +44,10 @@ if __name__ == "__main__":
     if not zip_files:
         raise ValueError("No files found.")
 
+    inserted_rows = 0
+    print(f"Parsing {len(zip_files)} files")
     for zip_file in zip_files:
         for filename, file in nem.csv_file_iter(zip_file):
-            print(filename)
             dfs = report_parser(filename, file)
             for table_name, df in dfs.items():
                 df.columns = df.columns.str.lower()
@@ -58,3 +59,10 @@ if __name__ == "__main__":
                     .upsert(records, ignore_duplicates=True)
                     .execute()
                 )
+                if response.data:
+                    inserted_rows += len(response.data)
+                    print(
+                        f"[{filename}] {supabase_table}: {len(response.data)} rows inserted"
+                    )
+
+    print(f"total: {inserted_rows} rows inserted")

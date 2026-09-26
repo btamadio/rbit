@@ -96,7 +96,6 @@ if __name__ == "__main__":
                         rows_inserted = len(response.data)
 
                 if rows_inserted > 0:
-                    # print(f"{filename}\t{supabase_table_name}\t{rows_inserted}")
                     table_rows_inserted[supabase_table_name] += rows_inserted
 
     if len(table_rows_inserted) == 0:

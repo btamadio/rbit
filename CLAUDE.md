@@ -1,19 +1,13 @@
-## Response Style & Concision
-- **Response length:** Concise. Lead with the direct result or answer first.
-- **Format:** Use bullet points, code snippets, and short headers. Skip conversational filler, preamble, and post-summary wrap-ups.
-- **Code explanations:** Do not explain obvious code changes unless asked; provide the diff or implementation directly.
-- **Verbosity:** Omit passive voice, fluff, and unnecessary narrative.
+# rbit
+Battery arbitrage backtests on the NEM (NSW1): benchmarks, MPC and RL, settled exactly as AEMO settles. Spec and milestones: [PLAN.md](PLAN.md).
+
+- Python: `.venv/bin/python`. Tests: `.venv/bin/python -m pytest` (real-data tests skip if `data/` isn't ingested).
+- `gh` auth: export `GH_TOKEN` from `.env`; never print it.
+- Workflow: issue → branch → PR that closes it; commits end with the Claude `Co-Authored-By` trailer; run `/code-review` before merge. Never commit to `main`.
+- Results work follows [docs/agents/research-rules.md](docs/agents/research-rules.md).
 
 ## Agent skills
 
-### Issue tracker
-
-GitHub Issues on `btamadio/rbit`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root, created lazily. See `docs/agents/domain.md`.
+- **Issue tracker:** GitHub Issues on `btamadio/rbit`. See [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
+- **Triage labels:** `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See [docs/agents/triage-labels.md](docs/agents/triage-labels.md).
+- **Domain docs:** single-context, `GLOSSARY.md` and `docs/adr/` at the repo root, created lazily. See [docs/agents/domain.md](docs/agents/domain.md).

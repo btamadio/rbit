@@ -3,7 +3,7 @@ Battery arbitrage backtests on the NEM (NSW1): benchmarks, MPC and RL, settled e
 
 - Python: `.venv/bin/python`. Tests: `.venv/bin/python -m pytest` (real-data tests skip if `data/` isn't ingested).
 - `gh` auth: export `GH_TOKEN` from `.env`; never print it.
-- Workflow: issue → branch → PR that closes it; commits end with the Claude `Co-Authored-By` trailer; run `/code-review` before merge. Never commit to `main`.
+- Workflow: issue → branch → PR that closes it; commits end with the Claude `Co-Authored-By` trailer; run `/code-review` immediately after opening a PR (and before merge). Never commit to `main`.
 - Before training, tuning, evaluating or reporting a strategy, read [docs/agents/research-rules.md](docs/agents/research-rules.md).
 
 ## Agent skills
@@ -18,6 +18,3 @@ Battery arbitrage backtests on the NEM (NSW1): benchmarks, MPC and RL, settled e
   - Specific mistakes made and how they were solved
   - Codebase patterns or triggers discovered
   - Library or tool quirks
-
-## Workflow
-- After opening a PR, always run the /code-review skill immediately.

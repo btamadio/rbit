@@ -15,6 +15,7 @@ dependencies = [
     "pydantic>=2.7",
     "tqdm>=4.66",
     "highspy>=1.7",
+    "gymnasium>=1.0",
 ]
 
 [project.optional-dependencies]

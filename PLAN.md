@@ -251,7 +251,7 @@ tests/           # no-lookahead, env↔LP parity, settlement maths
 | M2b ✅ | Industry-claim decomposition (section 7): NSW 2 h fleet energy vs FCAS split for CY2025. `python -m rbit.eval.industry` | Done 2026-11-02: report at `reports/m2b_industry_claim.md`. Method reproduces Riverina 1's published 190k within 2% on an RRP (no-MLF) basis. Energy share of the NSW 2 h merchant fleet 97.5% (not ~93%); energy-only comparator **212k $/MW** (RRP basis) = 66% of B4 |
 | M3 ✅ | Baselines B1, B2 + evaluation harness and report. `python -m rbit.eval.baselines` | Done 2026-11-02: report at `reports/m3_baselines.md`. B2 (pre-dispatch MPC, 15 h) 129k / 132k / 235k / 164k $/MW for CY2022–25 = 52–60% of B3; B1 (charge 11:00, discharge 17:00) 47–56% of B3. 2025 B2 164k vs Riverina 1 actual 159k (MLF basis) |
 | M3b | Foundation-model forecasting (section 8): Chronos-2, Timestral, TimesFM-3 (variants F1–F3) against pre-dispatch and the LightGBM gap model, on CY2024 | Forecast scores + B2-F\* $/MW/yr. Winner(s) chosen on MPC revenue and backfilled for all history. Licences checked |
-| M4 | Gymnasium environment | Replaying the LP schedule reproduces its objective exactly |
+| M4 ✅ | Gymnasium environment (`rbit/env.py`) | Done 2026-11-02: LP schedules replay through the env to the cent (synthetic with MLFs/fees/degradation, and a real June 2025 week). Observation: 24 past prices, 12 P5MIN + 46 PREDISPATCH steps (signed-log), calendar, MLFs, SoC |
 | M5 | RL v1 (SAC, with/without BC warm start) | Beats B1. Results on validation |
 | M6 | RL tuned + rolling-origin evaluation | Beats B2 on validation and test, stable across seeds |
 | M7 | Shadow deployment | One quarter of live paper P&L tracking the backtest |

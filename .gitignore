@@ -1,8 +1,9 @@
-.venv/
-/data/
 __pycache__/
-*.egg-info/
-.pytest_cache/
-.scratch/
 .agents/
 .claude/
+.env
+.pytest_cache/
+.scratch/
+.venv/
+*.egg-info/
+/data/

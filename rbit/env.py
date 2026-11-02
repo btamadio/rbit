@@ -8,6 +8,7 @@ revenue net of fees and degradation (shared settlement), divided by ``reward_sca
 Observation (float32): per-interval market features (see ``FEATURES``) followed by SoC in [0, 1].
 """
 
+import os
 from dataclasses import dataclass
 
 import gymnasium as gym
@@ -22,6 +23,7 @@ from rbit.data.infoset import InfoSet
 from rbit.market import settle
 from rbit.market.mlf import load_registration, mlf_schedule, mlf_series
 
+FEATURE_VERSION = 1  # bump when build_market's output changes, to invalidate cached features
 N_HISTORY = 24  # past dispatch prices (2 h)
 N_P5 = 12  # next 5-min prices (P5MIN, 1 h)
 N_PD = 46  # then 30-min prices to 24 h ahead (PREDISPATCH)
@@ -72,9 +74,15 @@ def load_market(data_cfg: DataConfig, cfg: BatteryConfig, start: str | pd.Timest
                 ) -> Market:
     """Market for start < interval_end <= end, with MLFs of cfg.mlf_station (or cfg's scalars).
 
-    shortcut: features are rebuilt each call (~1.5 ms/interval, ~2.5 min/year); cache to disk if
-    training restarts make this hurt.
+    Cached in data/features/ (building costs ~1.5 ms/interval, ~2.5 min/year).
     """
+    start, end = pd.Timestamp(start), pd.Timestamp(end)
+    mlf = cfg.mlf_station or f"mlf{cfg.mlf_gen:g}-{cfg.mlf_load:g}"
+    cache = (data_cfg.data_root / "features"
+             / f"{data_cfg.region}_{mlf}_{start:%Y%m%d%H%M}_{end:%Y%m%d%H%M}_v{FEATURE_VERSION}.npz")
+    if cache.exists():
+        z = np.load(cache)
+        return Market(pd.DatetimeIndex(z["ends"]), z["rrp"], z["mlf_gen"], z["mlf_load"], z["features"])
     df = store.load(data_cfg, "dispatch_price", pd.Timestamp(start) + pd.Timedelta(minutes=5),
                     pd.Timestamp(end) + pd.Timedelta(minutes=5))
     ends = pd.DatetimeIndex(df["interval_end"])
@@ -84,15 +92,24 @@ def load_market(data_cfg: DataConfig, cfg: BatteryConfig, start: str | pd.Timest
         m = mlf_series(mlf_schedule(load_registration(data_cfg), cfg.mlf_station), ends)
         gen, load = m.gen, m.load
     info = InfoSet.from_store(data_cfg, ends[0], ends[-1])
-    return build_market(info, ends, df["rrp"].to_numpy(), gen, load)
+    m = build_market(info, ends, df["rrp"].to_numpy(), gen, load)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cache.with_name(f"{cache.stem}.{os.getpid()}.tmp.npz")  # write then rename: readers never see a partial file
+    np.savez(tmp, ends=m.ends.to_numpy(), rrp=m.rrp, mlf_gen=m.mlf_gen, mlf_load=m.mlf_load, features=m.features)
+    tmp.replace(cache)
+    return m
 
 
 class BatteryEnv(gym.Env):
     metadata = {"render_modes": []}
 
     def __init__(self, cfg: BatteryConfig, market: Market, episode_steps: int | None = 3 * 288,
-                 reward_scale: float | None = None):
-        """``episode_steps=None`` runs the whole market once from its start (evaluation)."""
+                 reward_scale: float | None = None, random_soc: bool = False):
+        """``episode_steps=None`` runs the whole market once from its start (evaluation).
+
+        ``random_soc`` draws the initial SoC uniformly over the usable range (training).
+        """
+        self.random_soc = random_soc
         self.cfg, self.market = cfg, market
         n = len(market.ends)
         self.episode_steps = n if episode_steps is None else min(episode_steps, n)
@@ -120,8 +137,8 @@ class BatteryEnv(gym.Env):
             self._t0 = int(self.np_random.integers(0, n - self.episode_steps + 1))
         self._i = self._t0
         # options["soc"]: initial SoC as a fraction of the usable range (same scale as the observation)
-        self._e = (self.cfg.e_min + options["soc"] * (self.cfg.e_max - self.cfg.e_min) if "soc" in options
-                   else self.cfg.e_init)
+        soc = options.get("soc", self.np_random.uniform() if self.random_soc else None)
+        self._e = self.cfg.e_init if soc is None else self.cfg.e_min + soc * (self.cfg.e_max - self.cfg.e_min)
         return self._obs(), {"interval_end": self.market.ends[self._i]}
 
     def step(self, action):

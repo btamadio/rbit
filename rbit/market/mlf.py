@@ -51,11 +51,16 @@ def load_registration(cfg: DataConfig, month: str | None = None) -> pd.DataFrame
     return df
 
 
-def mlf_schedule(registration: pd.DataFrame, station_id: str) -> pd.DataFrame:
-    """Piecewise-constant [start, end) table of generation and load MLFs for one station."""
+def mlf_schedule(registration: pd.DataFrame, station_id: str, duids: list[str] | None = None) -> pd.DataFrame:
+    """Piecewise-constant [start, end) table of generation and load MLFs for one station.
+
+    ``duids`` restricts the records used (for stations that host several units).
+    """
     r = registration[registration["STATIONID"] == station_id]
+    if duids is not None:
+        r = r[r["DUID"].isin(duids)]
     if r.empty:
-        raise KeyError(f"station {station_id!r} not in registration data")
+        raise KeyError(f"station {station_id!r} (duids={duids}) not in registration data")
     recs = []
     for x in r.itertuples():
         if x.DISPATCHTYPE == "BIDIRECTIONAL":

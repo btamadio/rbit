@@ -23,7 +23,7 @@
 | SoC limits | 5–95% | |
 | Ramp | Full range within one interval | Normal for BESS |
 | Degradation | $/MWh throughput cost and/or a daily cycle cap | Must be **identical** across RL and every benchmark |
-| MLFs | Separate generation and load marginal loss factors for a real NSW BESS connection point | Settlement: `RRP × MW × 5/60 × MLF` |
+| MLFs | Riverina 1 BESS (RESS1) generation and load MLFs by date, from AEMO `DUDETAILSUMMARY` | Settlement: `RRP × MW × 5/60 × MLF` |
 | Other costs | Optional per-MWh charging network/fees | Off by default, recorded in config |
 
 Every comparison uses **one shared config object**, so RL, the benchmarks and the industry comparison run on the same physics and costs.
@@ -247,7 +247,7 @@ tests/           # no-lookahead, env↔LP parity, settlement maths
 | # | Milestone | Exit criterion |
 |---|---|---|
 | M1 ✅ | Data pipeline for NSW1 (dispatch, P5MIN, predispatch), with publish timestamps. `python -m rbit.data.ingest`, `python -m rbit.data.quality`, `pytest` | Done 2026-11-02: Oct 2021 – Sep 2026 ingested; report at `reports/data_quality_NSW1.md`; no-lookahead tests pass (synthetic + 2,000 real points). Known gap: PREDISPATCH all-runs missing from the AEMO archive for 2022-10 |
-| M2 | Battery/market core + perfect-foresight LP (B4) and MPC (B3) | $/MW/yr for CY2022–CY2025 (2 h, plus 1 h/4 h sensitivity). **First check against $217k** |
+| M2 ✅ | Battery/market core + perfect-foresight LP (B4) and MPC (B3). `python -m rbit.eval.perfect_foresight` | Done 2026-11-02: report at `reports/m2_perfect_foresight.md`. NSW1 2 h energy-only perfect foresight with Riverina 1 (RESS1) MLFs: 238k / 223k / 422k / 271k $/MW for CY2022–25; the 217k claim (energy + FCAS) is 80% of the 2025 figure |
 | M2b | Industry-claim decomposition (section 7): NSW 2 h fleet energy vs FCAS split for CY2025 | Energy-only comparator with its derivation; ~93% arbitrage share confirmed or corrected |
 | M3 | Baselines B1, B2 + evaluation harness and report | Pre-dispatch MPC $/MW/yr and % of B3 |
 | M3b | Foundation-model forecasting (section 8): Chronos-2, Timestral, TimesFM-3 (variants F1–F3) against pre-dispatch and the LightGBM gap model, on CY2024 | Forecast scores + B2-F\* $/MW/yr. Winner(s) chosen on MPC revenue and backfilled for all history. Licences checked |

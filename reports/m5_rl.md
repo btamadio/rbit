@@ -1,6 +1,6 @@
 # M5: SAC agent, validation year 2024 (NSW1, 2 h, Riverina 1 MLFs, A$15/MWh degradation)
 
-Generated 2026-11-02 18:59 by `python -m rbit.rl`. SB3 SAC, default hyperparameters,
+Generated 2026-11-02 19:18 by `python -m rbit.rl`. SB3 SAC, default hyperparameters,
 gamma 0.997, 1,000,000 steps per seed, trained on 2021-10 – 2023-12 (3-day episodes, random start
 and SoC). The 2024 policy was evaluated every 100,000 steps; the best checkpoint by 2024 net is
 reported, so the SAC figures are selected on 2024 and slightly optimistic. 2025 was not used.
@@ -23,3 +23,14 @@ reported, so the SAC figures are selected on 2024 and slightly optimistic. 2025 
 | 2 | 1,000,000 | 172k | 158k | 1.25 |
 
 Full evaluation history (every checkpoint) is in `reports/m5_rl.csv`.
+
+## Not done in this iteration
+
+PLAN.md section 9 items not yet tried, so this is weak evidence against SAC itself:
+
+- Behaviour-cloning warm start from B2 schedules
+- PPO as a check
+- Hyperparameter search (Optuna on validation); gamma and all SAC settings are untuned
+- 5+ seeds (3 here) and experiment tracking (MLflow/W&B)
+- % of B4, value over B2, revenue by month and time of day, tail diagnostics
+- Train/eval mismatch: training uses 3-day episodes from a random SoC, evaluation one continuous year

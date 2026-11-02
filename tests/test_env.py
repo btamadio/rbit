@@ -82,3 +82,20 @@ def test_lp_parity_on_a_real_week():
     net, _ = _replay(BatteryEnv(cfg, m, episode_steps=None), lp.mw)
     assert net == pytest.approx(lp.objective, abs=0.01)
     assert np.isfinite(m.features).all()
+
+
+@pytest.mark.skipif(not any(store.table_dir(DataConfig(), "p5min_region").glob("*.parquet")),
+                    reason="cleaned data not ingested")
+def test_feature_cache_hit_equals_fresh_build(monkeypatch):
+    import rbit.env as env_mod
+    monkeypatch.setattr(env_mod, "FEATURE_VERSION", 999_999)  # test-only cache file, removed below
+    cfg, data_cfg = BatteryConfig(mlf_station=None), DataConfig()
+    fresh = load_market(data_cfg, cfg, "2025-06-01", "2025-06-02")
+    cache = next((data_cfg.data_root / "features").glob("*_v999999.npz"))
+    try:
+        cached = load_market(data_cfg, cfg, "2025-06-01", "2025-06-02")
+    finally:
+        cache.unlink()
+    assert (cached.ends == fresh.ends).all()
+    for f in ("rrp", "mlf_gen", "mlf_load", "features"):
+        np.testing.assert_array_equal(getattr(cached, f), getattr(fresh, f))

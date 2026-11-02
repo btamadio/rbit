@@ -137,7 +137,7 @@ class BatteryEnv(gym.Env):
             self._t0 = int(self.np_random.integers(0, n - self.episode_steps + 1))
         self._i = self._t0
         # options["soc"]: initial SoC as a fraction of the usable range (same scale as the observation)
-        soc = options.get("soc", self.np_random.uniform() if self.random_soc else None)
+        soc = options["soc"] if "soc" in options else self.np_random.uniform() if self.random_soc else None
         self._e = self.cfg.e_init if soc is None else self.cfg.e_min + soc * (self.cfg.e_max - self.cfg.e_min)
         return self._obs(), {"interval_end": self.market.ends[self._i]}
 

@@ -117,6 +117,17 @@ def build_report(hist: pd.DataFrame, baselines: pd.DataFrame, steps: int) -> str
         "",
         "Full evaluation history (every checkpoint) is in `reports/m5_rl.csv`.",
         "",
+        "## Not done in this iteration",
+        "",
+        "PLAN.md section 9 items not yet tried, so this is weak evidence against SAC itself:",
+        "",
+        "- Behaviour-cloning warm start from B2 schedules",
+        "- PPO as a check",
+        "- Hyperparameter search (Optuna on validation); gamma and all SAC settings are untuned",
+        "- 5+ seeds (3 here) and experiment tracking (MLflow/W&B)",
+        "- % of B4, value over B2, revenue by month and time of day, tail diagnostics",
+        "- Train/eval mismatch: training uses 3-day episodes from a random SoC, evaluation one continuous year",
+        "",
     ])
 
 
@@ -129,6 +140,8 @@ def main(argv: list[str] | None = None) -> None:
     args = ap.parse_args(argv)
     data_cfg = DataConfig()
     out_root = data_cfg.data_root / "models" / "m5"
+    # shortcut: best checkpoint is selected on 2024, so 2024 figures are optimistic; add a held-out
+    # selection window before M6 compares against B2.
     for period in (TRAIN, VALID):  # build the feature caches once, so seeds only read them
         load_market(data_cfg, BatteryConfig(), *period)
     with ProcessPoolExecutor(max_workers=len(args.seeds)) as pool:

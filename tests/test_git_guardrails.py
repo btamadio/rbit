@@ -55,6 +55,7 @@ ALLOWED = [
     "git push -u origin feat",
     "git push origin feat --no-verify",
     "git push origin main-fix",
+    "git push origin HEAD:feat",
     "git push origin feat/main-thing",
     "git checkout -b maintenance && git push -u origin maintenance",
     "git push origin --delete feat",
@@ -103,8 +104,11 @@ def test_allowed(command, repo_on):
     assert out.returncode == 0, out.stderr
 
 
-@pytest.mark.parametrize("command", ["git push", "git push origin", "git push -u origin"])
-def test_bare_push_blocked_on_main_only(command, repo_on):
+@pytest.mark.parametrize("command", [
+    "git push", "git push origin", "git push -u origin",
+    "git push origin HEAD", "git push -u origin HEAD", "git push origin @",
+])
+def test_push_of_current_branch_blocked_on_main_only(command, repo_on):
     assert run(command, repo_on("main")).returncode == 2
     assert run(command, repo_on("feat")).returncode == 0
 

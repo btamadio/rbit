@@ -60,9 +60,11 @@ def short_flags(args):
     return "".join(a[1:] for a in args if a.startswith("-") and not a.startswith("--"))
 
 
-def is_main(ref):
-    ref = ref.lstrip("+").split(":")[-1]
-    return ref.removeprefix("refs/heads/") == "main"
+def is_main(ref, cwd):
+    dst = ref.lstrip("+").split(":")[-1].removeprefix("refs/heads/")
+    if dst in {"HEAD", "@"}:  # `push origin HEAD` pushes the current branch
+        dst = current_branch(cwd)
+    return dst == "main"
 
 
 def current_branch(cwd):
@@ -81,7 +83,7 @@ def reason(cwd, sub, args):
         refspecs = positional[1:]
         if any(r.startswith("+") for r in refspecs):
             return "force push (+refspec)"
-        if any(is_main(r) for r in refspecs):
+        if any(is_main(r, cwd) for r in refspecs):
             return "push to main"
         if not refspecs and current_branch(cwd) == "main":
             return "bare push from main"

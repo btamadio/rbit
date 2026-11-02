@@ -46,14 +46,17 @@ def _k(x: float) -> str:
 def build_report(df: pd.DataFrame, tod: tuple[int, int]) -> str:
     rev = df.pivot(index="year", columns="benchmark", values="revenue_per_mw")
     cyc = df.pivot(index="year", columns="benchmark", values="cycles_per_day")
+    net = df.pivot(index="year", columns="benchmark", values="net_per_mw")
     pad = df[df["benchmark"] == "B2"].set_index("year")["n_padded"]
     rows = [f"| {y} | {_k(r.B1)} | {_k(r.B2)} | {_k(r.B3)} | {_k(r.B4)} | {r.B1 / r.B3:.0%} | **{r.B2 / r.B3:.0%}** | "
-            f"{cyc.loc[y, 'B1']:.2f} | {cyc.loc[y, 'B2']:.2f} | {int(pad.loc[y]):,} |" for y, r in rev.iterrows()]
+            f"{net.loc[y, 'B2'] / net.loc[y, 'B3']:.0%} | {cyc.loc[y, 'B1']:.2f} | {cyc.loc[y, 'B2']:.2f} | {int(pad.loc[y]):,} |"
+            for y, r in rev.iterrows()]
     return "\n".join([
         "# M3: baselines (NSW1, 2 h, energy only, Riverina 1 MLFs)",
         "",
         f"Generated {pd.Timestamp.now():%Y-%m-%d %H:%M} by `python -m rbit.eval.baselines`. Gross energy revenue,",
-        "$/MW/yr, same asset and settlement as M2 (`BatteryConfig()` defaults).",
+        f"$/MW/yr, same asset and settlement as M2 (`BatteryConfig()` defaults, degradation A${BatteryConfig().degradation_cost:g}/MWh;",
+        "all strategies optimise net of it). \"B2 / B3 net\" compares revenue net of degradation.",
         "",
         f"- **B1** time-of-day rule: charge from {tod[0]:02d}:00 and discharge from {tod[1]:02d}:00 for",
         f"  {BatteryConfig().duration_h:g} h at full power; tuned on {TRAIN_YEARS[0]}–{TRAIN_YEARS[-1]} (in-sample there).",
@@ -61,8 +64,8 @@ def build_report(df: pd.DataFrame, tod: tuple[int, int]) -> str:
         "  read through InfoSet (decision 1 min before the dispatch run), first action executed, settled at actual RRP.",
         "- **B3 / B4** from `reports/m2_perfect_foresight.csv` (perfect foresight).",
         "",
-        "| Year | B1 | B2 | B3 | B4 | B1 / B3 | B2 / B3 | B1 cycles/day | B2 cycles/day | B2 padded steps |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| Year | B1 | B2 | B3 | B4 | B1 / B3 | B2 / B3 | B2 / B3 net | B1 cycles/day | B2 cycles/day | B2 padded steps |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
         *rows,
         "",
         "Padded steps: decisions where pre-dispatch did not cover the horizon and the last price was held",

@@ -34,7 +34,7 @@ class Job:
     year: int
     duration_h: float
     horizon_h: float = 24.0  # B3 only
-    degradation_cost: float = 0.0
+    degradation_cost: float = BatteryConfig().degradation_cost
     rte: float = BatteryConfig().rte
     mlf_station: str | None = "RESS1"
     label: str = "base"
@@ -96,7 +96,7 @@ def default_jobs(years: list[int], durations: list[float]) -> list[Job]:
     jobs = [Job(b, y, d) for y in years for d in durations for b in ("B4", "B3")]
     last = max(years)
     jobs += [Job(b, last, 2.0, degradation_cost=c, label=f"degradation ${c:g}/MWh")
-             for c in (10.0, 20.0) for b in ("B4", "B3")]
+             for c in (0.0, 30.0) for b in ("B4", "B3")]
     jobs += [Job("B3", last, 2.0, horizon_h=48.0, label="B3 horizon 48 h")]
     jobs += [Job(b, last, 2.0, rte=r, label=f"RTE {r:.0%}") for r in (0.85, 0.88) for b in ("B4", "B3")]
     jobs += [Job("B4", y, 2.0, mlf_station=None, label="MLF 1.0") for y in years]
@@ -110,10 +110,11 @@ def _k(x: float) -> str:
 def build_report(df: pd.DataFrame) -> str:
     base = df[df["label"] == "base"]
     piv = base.pivot_table(index=["year", "duration_h"], columns="benchmark",
-                           values=["revenue_per_mw", "cycles_per_day"]).sort_index()
+                           values=["revenue_per_mw", "net_per_mw", "cycles_per_day"]).sort_index()
     rows = []
     for (year, dur), r in piv.iterrows():
-        rows.append(f"| {year} | {dur:g} h | {_k(r[('revenue_per_mw', 'B4')])} | {_k(r[('revenue_per_mw', 'B3')])} | "
+        rows.append(f"| {year} | {dur:g} h | {_k(r[('revenue_per_mw', 'B4')])} | {_k(r[('net_per_mw', 'B4')])} | "
+                    f"{_k(r[('revenue_per_mw', 'B3')])} | "
                     f"{r[('revenue_per_mw', 'B3')] / r[('revenue_per_mw', 'B4')]:.1%} | "
                     f"{r[('cycles_per_day', 'B4')]:.2f} | {r[('cycles_per_day', 'B3')]:.2f} |")
     sens = df[~df["label"].isin(["base", "MLF 1.0"])].sort_values(["label", "benchmark"])
@@ -132,7 +133,8 @@ def build_report(df: pd.DataFrame) -> str:
         f"Generated {pd.Timestamp.now():%Y-%m-%d %H:%M} by `python -m rbit.eval.perfect_foresight`.",
         "",
         "Gross energy revenue per MW of rated power per calendar year, settled at actual 5-minute RRP.",
-        f"Base asset: 100 MW, SoC 5–95%, RTE {BatteryConfig().rte:.0%}, no fees, no degradation cost, and Riverina 1 BESS (RESS1)",
+        f"Base asset: 100 MW, SoC 5–95%, RTE {BatteryConfig().rte:.0%}, no fees, degradation A${BatteryConfig().degradation_cost:g}/MWh"
+        " discharged (optimised net; gross revenue shown, net in the B4 net column) and Riverina 1 BESS (RESS1)",
         "MLFs by date from AEMO registration data (DUDETAILSUMMARY); see the MLF table below.",
         "B4 = full-year LP (perfect foresight, terminal SoC ≥ initial). B3 = rolling MPC on actual prices,",
         "24 h horizon, re-solved every interval. Both: no discharge at negative prices (see `rbit/optim/lp.py`).",
@@ -141,8 +143,8 @@ def build_report(df: pd.DataFrame) -> str:
         "",
         "## $/MW/yr by year and duration",
         "",
-        "| Year | Duration | B4 full-horizon LP | B3 rolling MPC (24 h) | B3 / B4 | B4 cycles/day | B3 cycles/day |",
-        "|---|---|---|---|---|---|---|",
+        "| Year | Duration | B4 full-horizon LP | B4 net | B3 rolling MPC (24 h) | B3 / B4 | B4 cycles/day | B3 cycles/day |",
+        "|---|---|---|---|---|---|---|---|",
         *rows,
         "",
         f"## First check against the $217k/MW claim ({last}, 2 h)",
@@ -150,7 +152,7 @@ def build_report(df: pd.DataFrame) -> str:
         f"- B4 {_k(ref['B4'])} and B3 {_k(ref['B3'])} $/MW/yr, energy only, perfect foresight.",
         f"- The claim ({_k(INDUSTRY_CLAIM)}) is energy + FCAS with no foresight, so it is "
         f"{INDUSTRY_CLAIM / ref['B3']:.0%} of B3 and {INDUSTRY_CLAIM / ref['B4']:.0%} of B4 on this basis.",
-        "- Caveats: no degradation cost, price-taker, no network constraints. The energy-only comparator",
+        "- Gross revenue, as industry figures are. Caveats: price-taker, no network constraints. The energy-only comparator",
         "  comes in M2b.",
         "",
         "## Marginal loss factors (Riverina 1 BESS, RESS1) and their effect, B4 2 h",

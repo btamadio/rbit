@@ -1,6 +1,6 @@
 # M2b: energy vs FCAS revenue of NSW grid batteries, CY2025
 
-Generated 2026-11-02 15:35 by `python -m rbit.eval.industry`. Method and exclusions:
+Generated 2026-11-02 16:23 by `python -m rbit.eval.industry`. Method and exclusions:
 see the module docstring in `rbit/eval/industry.py`. Estimates from public AEMO data (SCADA, FCAS
 enablement, prices, registered MLFs); annualised $/MW of registered max capacity.
 **RRP basis** = revenue at the regional price with no loss factors (how PortfolioEnergy reports);
@@ -62,11 +62,11 @@ B4 on the MLF basis uses Riverina 1's MLFs (M2); on the RRP basis it is the M2 "
 
 | Strategy | RRP basis | % of B4 | MLF basis (RESS1) | % of B4 |
 |---|---|---|---|---|
-| B4 perfect-foresight LP | 318k | 100% | 275k | 100% |
-| B3 perfect-foresight MPC, 24 h |  |  | 275k | 100% |
-| Energy-only comparator (claim x fleet energy share) | 212k | 66% |  |  |
-| Riverina 1 actual energy revenue | 183k | 58% | 159k | 58% |
-| NSW 2 h merchant fleet actual energy revenue | 125k | 39% | 113k | 41% |
-| Industry claim, energy + FCAS (reference) | 217k | 68% | | |
+| B4 perfect-foresight LP | 313k | 100% | 270k | 100% |
+| B3 perfect-foresight MPC, 24 h |  |  | 270k | 100% |
+| Energy-only comparator (claim x fleet energy share) | 212k | 68% |  |  |
+| Riverina 1 actual energy revenue | 183k | 59% | 159k | 59% |
+| NSW 2 h merchant fleet actual energy revenue | 125k | 40% | 113k | 42% |
+| Industry claim, energy + FCAS (reference) | 217k | 69% | | |
 
 B3 was only run on the MLF basis. B2 (pre-dispatch MPC) and RL rows are added from M3 / M6.

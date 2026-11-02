@@ -18,7 +18,9 @@ class BatteryConfig(BaseModel):
     mlf_gen: float = 1.0  # scalar MLF on discharge (generation) when mlf_station is None
     mlf_load: float = 1.0  # scalar MLF on charge (load) when mlf_station is None
     charge_fee: float = 0.0  # $/MWh charged (network/market fees), off by default
-    degradation_cost: float = 0.0  # $/MWh discharged
+    # $/MWh discharged. A$15 = cycle-driven share of LFP energy-block cost (~A$120-150k/MWh over
+    # 5,400-7,200 MWh discharged per MWh), range A$10-20; see the M2 report.
+    degradation_cost: float = 15.0
 
     @computed_field
     @property

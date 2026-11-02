@@ -19,7 +19,7 @@ def _prices(n=600, seed=0):
 
 
 def test_two_interval_arbitrage_by_hand():
-    cfg = BatteryConfig(duration_h=1.0, soc_init=0.05)  # start empty
+    cfg = BatteryConfig(duration_h=1.0, soc_init=0.05, degradation_cost=0.0)  # start empty
     s = solve_schedule(cfg, np.array([10.0, 100.0]))
     e_in = 100 * INTERVAL_H * cfg.eta  # charge at full power, then discharge what was stored
     d = e_in * cfg.eta / INTERVAL_H

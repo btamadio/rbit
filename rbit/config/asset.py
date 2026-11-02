@@ -8,7 +8,7 @@ INTERVAL_H = 5 / 60  # NEM dispatch interval in hours
 class BatteryConfig(BaseModel):
     power_mw: float = 100.0
     duration_h: float = 2.0
-    rte: float = 0.88  # round-trip efficiency, split sqrt(rte) on charge and on discharge
+    rte: float = 0.90  # round-trip efficiency, split sqrt(rte) on charge and on discharge
     soc_min: float = 0.05
     soc_max: float = 0.95
     soc_init: float = 0.5

@@ -35,7 +35,7 @@ class Job:
     duration_h: float
     horizon_h: float = 24.0  # B3 only
     degradation_cost: float = 0.0
-    rte: float = 0.88
+    rte: float = BatteryConfig().rte
     mlf_station: str | None = "RESS1"
     label: str = "base"
 
@@ -98,7 +98,7 @@ def default_jobs(years: list[int], durations: list[float]) -> list[Job]:
     jobs += [Job(b, last, 2.0, degradation_cost=c, label=f"degradation ${c:g}/MWh")
              for c in (10.0, 20.0) for b in ("B4", "B3")]
     jobs += [Job("B3", last, 2.0, horizon_h=48.0, label="B3 horizon 48 h")]
-    jobs += [Job(b, last, 2.0, rte=r, label=f"RTE {r:.0%}") for r in (0.85, 0.90) for b in ("B4", "B3")]
+    jobs += [Job(b, last, 2.0, rte=r, label=f"RTE {r:.0%}") for r in (0.85, 0.88) for b in ("B4", "B3")]
     jobs += [Job("B4", y, 2.0, mlf_station=None, label="MLF 1.0") for y in years]
     return jobs
 
@@ -132,7 +132,7 @@ def build_report(df: pd.DataFrame) -> str:
         f"Generated {pd.Timestamp.now():%Y-%m-%d %H:%M} by `python -m rbit.eval.perfect_foresight`.",
         "",
         "Gross energy revenue per MW of rated power per calendar year, settled at actual 5-minute RRP.",
-        "Base asset: 100 MW, SoC 5–95%, RTE 88%, no fees, no degradation cost, and Riverina 1 BESS (RESS1)",
+        f"Base asset: 100 MW, SoC 5–95%, RTE {BatteryConfig().rte:.0%}, no fees, no degradation cost, and Riverina 1 BESS (RESS1)",
         "MLFs by date from AEMO registration data (DUDETAILSUMMARY); see the MLF table below.",
         "B4 = full-year LP (perfect foresight, terminal SoC ≥ initial). B3 = rolling MPC on actual prices,",
         "24 h horizon, re-solved every interval. Both: no discharge at negative prices (see `rbit/optim/lp.py`).",

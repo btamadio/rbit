@@ -3,6 +3,9 @@
 Grid-scale battery arbitrage on Australia's National Electricity Market (NEM): how much of the
 perfect-foresight revenue can a realistic strategy capture, settled exactly as AEMO would settle it?
 
+Most of the work is the data pipeline (AEMO archive ingest with publish timestamps), the
+perfect-foresight and MPC benchmarks, and settlement-accurate backtests; RL sits on top of them.
+
 Iteration 1 scope: NSW1, energy only (no FCAS), price-taker, 100 MW / 200 MWh, 90% round-trip
 efficiency, A$15/MWh degradation, Riverina 1 BESS marginal loss factors. Full design in [PLAN.md](PLAN.md).
 
@@ -13,16 +16,16 @@ efficiency, A$15/MWh degradation, Riverina 1 BESS marginal loss factors. Full de
 | B3: rolling MPC on actual prices (perfect foresight) | 395k | 100% |
 | B2: rolling MPC on AEMO pre-dispatch prices as published | 213k | 54% |
 | B1: time-of-day rule (charge 11:00, discharge 17:00) | 201k | 51% |
-| SAC reinforcement learning agent, 3 seeds | 159k ± 17k | 40% |
+| SAC reinforcement learning agent, 3 seeds (checkpoints selected on 2024, so optimistic) | 159k ± 17k | 40% |
 
 - Pre-dispatch MPC (B2) is the realistic baseline to beat; RL v1 does not yet beat even the
   time-of-day rule ([reports/m5_rl.md](reports/m5_rl.md), including what wasn't tried).
-- A gradient-boosting correction to pre-dispatch halves forecast error but *lowers* MPC revenue 12%
+- A gradient-boosting correction to pre-dispatch halves 1–15 h forecast error but *lowers* MPC net revenue 12%
   ([reports/m3b_forecast.md](reports/m3b_forecast.md)).
-- The industry figure of A$217k/MW for NSW 2 h batteries is 80% of 2025 perfect-foresight energy
-  revenue ([reports/m2b_industry_claim.md](reports/m2b_industry_claim.md)).
+- The industry figure of A$217k/MW for NSW 2 h batteries is 80% of 2025 perfect-foresight *gross*
+  energy revenue ([reports/m2b_industry_claim.md](reports/m2b_industry_claim.md)).
 
-Negative results are reported alongside positive ones. All reports are in [reports/](reports/).
+All reports are in [reports/](reports/).
 
 ## Correctness rules
 
@@ -64,14 +67,16 @@ pytest
 ## How it's built
 
 rbit is built with a coding-agent workflow (Claude Code). The human sets scope, makes the modelling
-calls and reviews the results; agents write most of the code, under these guardrails:
+calls and reviews the results; agents write most of the code (every commit carries a Claude
+`Co-Authored-By` trailer). Guardrails:
 
 - **Spec first.** [PLAN.md](PLAN.md) defines each milestone and its exit criterion before code is written.
-- **Issue → branch → PR.** Work is tracked as GitHub issues; each PR closes one
+- **Issue → branch → PR (since M5).** M1–M4 were committed directly to `main`; from M5 on, work is
+  tracked as GitHub issues and each PR closes one
   (e.g. [#4](https://github.com/btamadio/rbit/issues/4) → [#5](https://github.com/btamadio/rbit/pull/5)).
-- **Two-axis review.** Each PR is reviewed by two independent agents, one against the repo's standards
-  and one against the spec, and the findings are fixed or deferred in writing.
+- **Two-axis review (since M5).** Each PR is reviewed by two independent agents, one against the repo's
+  standards and one against the spec; findings are fixed or deferred in a PR comment.
 - **Tests as the contract.** No-lookahead, settlement and env↔LP parity tests have to pass before a result is reported.
-- **Honest reports.** Every milestone writes a generated report, including the gates it fails.
+- **Honest reports.** Every benchmark milestone writes a generated report, including the gates it fails.
 
 Agent conventions for this repo are in [CLAUDE.md](CLAUDE.md) and [docs/agents/](docs/agents/).

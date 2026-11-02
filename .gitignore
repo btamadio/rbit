@@ -1,6 +1,8 @@
 __pycache__/
 .agents/
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 .env
 .pytest_cache/
 .scratch/

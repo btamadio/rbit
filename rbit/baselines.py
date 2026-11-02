@@ -64,14 +64,20 @@ def predispatch_path(obs: Observation, horizon: int) -> tuple[np.ndarray, int]:
 
 
 def run_predispatch_mpc(cfg: BatteryConfig, info: InfoSet, ends: pd.DatetimeIndex, gen: np.ndarray,
-                        load: np.ndarray, horizon: int = B2_HORIZON) -> tuple[np.ndarray, dict[str, int]]:
-    """B2 over ``ends``. ``gen``/``load`` are MLFs for ``ends`` followed by ``horizon`` more intervals."""
+                        load: np.ndarray, horizon: int = B2_HORIZON, adjust=None) -> tuple[np.ndarray, dict[str, int]]:
+    """B2 over ``ends``. ``gen``/``load`` are MLFs for ``ends`` followed by ``horizon`` more intervals.
+
+    ``adjust(obs, path) -> path`` optionally corrects the price path before planning (B2-F).
+    """
     mpc = RollingMPC(cfg, horizon)
     e = cfg.e_init
     mw = np.empty(len(ends))
     padded_steps = 0
     for i, t in enumerate(ends):
-        path, padded = predispatch_path(info.at(t), horizon)
+        obs = info.at(t)
+        path, padded = predispatch_path(obs, horizon)
+        if adjust is not None:
+            path = adjust(obs, path)
         padded_steps += padded > 0
         a = project(cfg, e, mpc.plan(path, e, gen[i: i + horizon], load[i: i + horizon])[0])
         e = min(max(step(cfg, e, a), cfg.e_min), cfg.e_max)

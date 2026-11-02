@@ -1,5 +1,6 @@
 """Find and download monthly MMSDM archive files from NEMWeb."""
 
+import os
 import re
 import time
 from pathlib import Path
@@ -7,6 +8,7 @@ from urllib.parse import quote, unquote
 
 import httpx
 
+from rbit.config import DataConfig
 from rbit.data.tables import TableSpec
 
 BASE_URL = "https://nemweb.com.au/Data_Archive/Wholesale_Electricity/MMSDM"
@@ -57,7 +59,7 @@ def download(client: httpx.Client, year: int, month: int, folder: str, name: str
         return dest
     dest_dir.mkdir(parents=True, exist_ok=True)
     url = month_dir_url(year, month, folder) + quote(name)
-    tmp = dest.with_suffix(".part")
+    tmp = dest.with_name(f"{dest.name}.{os.getpid()}.part")  # per process: parallel downloads can't interleave
     for attempt in range(retries):
         try:
             with client.stream("GET", url) as r:
@@ -65,7 +67,7 @@ def download(client: httpx.Client, year: int, month: int, folder: str, name: str
                 with open(tmp, "wb") as f:
                     for chunk in r.iter_bytes(1 << 20):
                         f.write(chunk)
-            tmp.rename(dest)
+            tmp.replace(dest)
             return dest
         except (httpx.HTTPError, httpx.TransportError):
             if attempt == retries - 1:
@@ -76,3 +78,14 @@ def download(client: httpx.Client, year: int, month: int, folder: str, name: str
 
 def make_client() -> httpx.Client:
     return httpx.Client(timeout=httpx.Timeout(60.0, read=300.0), follow_redirects=True)
+
+
+def download_table(cfg: DataConfig, table: str, year: int, month: int, folder: str = "DATA") -> list[Path]:
+    """Download every file of one un-normalised MMS table (e.g. DUDETAIL) for a month into cfg.raw_dir."""
+    spec = TableSpec(name=table.lower(), mms_table=table, folder=folder, old_marker="", new_marker="", columns={},
+                     key=())
+    with make_client() as client:
+        names = match_files(list_folder(client, year, month, folder), spec)
+        if not names:
+            raise FileNotFoundError(f"{table} not in the {year}-{month:02d} archive ({folder})")
+        return [download(client, year, month, folder, n, cfg.raw_dir / f"{year}{month:02d}") for n in names]

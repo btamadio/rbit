@@ -18,17 +18,7 @@ import pandas as pd
 from rbit.config import DataConfig
 from rbit.data import archive
 from rbit.data.mms import read_mms_zip
-from rbit.data.tables import TableSpec
 
-DUDETAILSUMMARY = TableSpec(
-    name="dudetailsummary",
-    mms_table="DUDETAILSUMMARY",
-    folder="DATA",
-    old_marker="",
-    new_marker="",
-    columns={},
-    key=(),
-)
 _COLS = ["DUID", "START_DATE", "END_DATE", "DISPATCHTYPE", "STATIONID", "REGIONID", "TRANSMISSIONLOSSFACTOR",
          "SECONDARY_TLF"]
 _TS = "%Y/%m/%d %H:%M:%S"
@@ -37,12 +27,7 @@ _TS = "%Y/%m/%d %H:%M:%S"
 def load_registration(cfg: DataConfig, month: str | None = None) -> pd.DataFrame:
     """DUDETAILSUMMARY rows for cfg.region from the given (default: latest configured) monthly archive."""
     p = pd.Period(month or cfg.end, freq="M")
-    raw_dir = cfg.raw_dir / f"{p.year}{p.month:02d}"
-    with archive.make_client() as client:
-        names = archive.match_files(archive.list_folder(client, p.year, p.month, "DATA"), DUDETAILSUMMARY)
-        if not names:
-            raise FileNotFoundError(f"DUDETAILSUMMARY not in the {p} archive")
-        paths = [archive.download(client, p.year, p.month, "DATA", n, raw_dir) for n in names]
+    paths = archive.download_table(cfg, "DUDETAILSUMMARY", p.year, p.month)
     df = pd.concat([read_mms_zip(path, _COLS, cfg.region) for path in paths], ignore_index=True)
     for c in ("START_DATE", "END_DATE"):
         df[c] = pd.to_datetime(df[c], format=_TS)

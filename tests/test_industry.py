@@ -36,3 +36,26 @@ def test_where_filter_keeps_only_listed_values(tmp_path):
     p = write_mms_zip(tmp_path / "dl.zip", [(["DUID", "INITIALMW"], [["RESS1", "1"], ["RESS1G", "2"], ["X", "RESS1"]])])
     df = read_mms_zip(p, ["DUID", "INITIALMW"], where=("DUID", {"RESS1"}))
     assert df["DUID"].tolist() == ["RESS1"]
+
+
+def test_unit_cache_hits_even_when_a_requested_unit_has_no_rows(tmp_path, monkeypatch):
+    import rbit.eval.industry as ind
+    from rbit.config import DataConfig
+    calls = []
+    monkeypatch.setattr(ind.archive, "download_table", lambda *a, **k: calls.append(a) or ["x.zip"])
+    rows = {"SETTLEMENTDATE": ["2025/01/01 00:05:00"], "DUID": ["A"], "INTERVENTION": ["0"], "INITIALMW": ["1"],
+            "TOTALCLEARED": ["1"]} | {s: ["0"] for s in SERVICES}
+    monkeypatch.setattr(ind, "read_mms_zip", lambda *a, **k: pd.DataFrame(rows))
+    cfg = DataConfig(data_root=tmp_path)
+    for _ in range(2):  # unit "B" not registered yet: no rows, but the second call must still hit the cache
+        df = ind._unit_month(cfg, ("A", "B"), 2025, 1)
+    assert len(calls) == 1 and df["duid"].tolist() == ["A"]
+    ind._unit_month(cfg, ("A", "C"), 2025, 1)  # a unit never asked for: miss
+    assert len(calls) == 2
+
+
+def test_report_refuses_an_empty_fleet():
+    from rbit.eval.industry import build_report
+    res = pd.DataFrame({"two_hour": [False], "full_year": [True], "excluded": [""]}, index=["X"])
+    with pytest.raises(ValueError, match="no 2-hour"):
+        build_report(res, 2024, None)

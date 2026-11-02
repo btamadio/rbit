@@ -29,7 +29,6 @@ import pandas as pd
 from rbit.config import INTERVAL_H, DataConfig
 from rbit.data import archive, store
 from rbit.data.mms import read_mms_zip
-from rbit.data.tables import TableSpec
 from rbit.market.mlf import load_registration, mlf_schedule, mlf_series
 
 INDUSTRY_CLAIM = 217_000  # $/MW/yr, PortfolioEnergy, NSW 2 h category, 2025, energy + FCAS
@@ -46,20 +45,6 @@ SERVICES = ["RAISE6SEC", "RAISE60SEC", "RAISE5MIN", "RAISEREG", "LOWER6SEC", "LO
             "LOWERREG", "RAISE1SEC", "LOWER1SEC"]
 
 
-def _spec(table: str) -> TableSpec:
-    return TableSpec(name=table.lower(), mms_table=table, folder="DATA", old_marker="", new_marker="", columns={},
-                     key=())
-
-
-def _download(cfg: DataConfig, table: str, year: int, month: int) -> list[Path]:
-    spec = _spec(table)
-    with archive.make_client() as client:
-        names = archive.match_files(archive.list_folder(client, year, month, "DATA"), spec)
-        if not names:
-            raise FileNotFoundError(f"{table} not in the {year}-{month:02d} archive")
-        return [archive.download(client, year, month, "DATA", n, cfg.raw_dir / f"{year}{month:02d}") for n in names]
-
-
 def _num(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
     for c in cols:
         df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -67,7 +52,11 @@ def _num(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
 
 
 def fleet(cfg: DataConfig, year: int) -> pd.DataFrame:
-    """Bidirectional units in cfg.region registered at some point during ``year``, with size and duration."""
+    """Bidirectional units in cfg.region registered at some point during ``year``, with size and duration.
+
+    shortcut: bidirectional (BDU) registrations only; NSW batteries became BDUs in mid/late 2024, so years
+    before 2025 need the older GENERATOR/LOAD DUID pairs added.
+    """
     reg = load_registration(cfg)
     y0, y1 = pd.Timestamp(year, 1, 1), pd.Timestamp(year + 1, 1, 1)
     bdu = reg[(reg["DISPATCHTYPE"] == "BIDIRECTIONAL") & (reg["START_DATE"] < y1) & (reg["END_DATE"] > y0)]
@@ -76,7 +65,7 @@ def fleet(cfg: DataConfig, year: int) -> pd.DataFrame:
     p = pd.Period(cfg.end, freq="M")
     cols = ["DUID", "EFFECTIVEDATE", "VERSIONNO", "MAXCAPACITY", "MAXSTORAGECAPACITY"]
     det = pd.concat([read_mms_zip(f, cols, where=("DUID", set(units.index)))
-                     for f in _download(cfg, "DUDETAIL", p.year, p.month)], ignore_index=True)
+                     for f in archive.download_table(cfg, "DUDETAIL", p.year, p.month)], ignore_index=True)
     det["EFFECTIVEDATE"] = pd.to_datetime(det["EFFECTIVEDATE"], format="%Y/%m/%d %H:%M:%S")
     det = _num(det, ["VERSIONNO", "MAXCAPACITY", "MAXSTORAGECAPACITY"])
     det = det[det["EFFECTIVEDATE"] < y1].sort_values(["DUID", "EFFECTIVEDATE", "VERSIONNO"]).groupby("DUID").last()
@@ -97,12 +86,12 @@ _PRICE_COLS = ["SETTLEMENTDATE", "REGIONID", "INTERVENTION", *[f"{s}RRP" for s i
 
 def _unit_month(cfg: DataConfig, duids: tuple[str, ...], year: int, month: int) -> pd.DataFrame:
     out = cfg.clean_dir / "unit_dispatch" / f"{year}{month:02d}.parquet"
-    if out.exists():
+    asked = out.with_suffix(".duids")  # units requested when cached; some have no rows yet in early months
+    if out.exists() and asked.exists() and set(duids) <= set(asked.read_text().split()):
         cached = pd.read_parquet(out)
-        if set(duids) <= set(cached["duid"].unique()):
-            return cached[cached["duid"].isin(duids)]
+        return cached[cached["duid"].isin(duids)]
     df = pd.concat([read_mms_zip(f, _DL_COLS, where=("DUID", set(duids)))
-                    for f in _download(cfg, "DISPATCHLOAD", year, month)], ignore_index=True)
+                    for f in archive.download_table(cfg, "DISPATCHLOAD", year, month)], ignore_index=True)
     df = _num(df, ["INTERVENTION", "INITIALMW", "TOTALCLEARED", *SERVICES])
     df = df[df["INTERVENTION"] == 0].drop(columns="INTERVENTION")
     df["SETTLEMENTDATE"] = pd.to_datetime(df["SETTLEMENTDATE"], format="%Y/%m/%d %H:%M:%S")
@@ -111,11 +100,12 @@ def _unit_month(cfg: DataConfig, duids: tuple[str, ...], year: int, month: int) 
     df = df.drop_duplicates(["duid", "interval_end"], keep="last")
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out, index=False)
+    asked.write_text("\n".join(sorted(duids)))
     return df
 
 
 def _fcas_prices_month(cfg: DataConfig, year: int, month: int) -> pd.DataFrame:
-    df = pd.concat([read_mms_zip(f, _PRICE_COLS, cfg.region) for f in _download(cfg, "DISPATCHPRICE", year, month)],
+    df = pd.concat([read_mms_zip(f, _PRICE_COLS, cfg.region) for f in archive.download_table(cfg, "DISPATCHPRICE", year, month)],
                    ignore_index=True)
     df = _num(df, ["INTERVENTION", *[f"{s}RRP" for s in SERVICES]])
     df = df[df["INTERVENTION"] == 0]
@@ -191,6 +181,8 @@ def _k(x: float) -> str:
 
 def build_report(res: pd.DataFrame, year: int, pf: pd.DataFrame | None) -> str:
     two = res[res["two_hour"] & res["full_year"] & (res["excluded"] == "")]
+    if two.empty:
+        raise ValueError(f"no 2-hour merchant battery registered as a BDU for all of {year}; see fleet()")
     share = two["energy_rrp"].sum() / (two["energy_rrp"].sum() + two["fcas"].sum())  # pooled $, RRP basis
     lo, hi = two["energy_share"].min(), two["energy_share"].max()
     comp, comp_lo, comp_hi = INDUSTRY_CLAIM * share, INDUSTRY_CLAIM * lo, INDUSTRY_CLAIM * hi

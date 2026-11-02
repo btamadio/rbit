@@ -54,6 +54,8 @@ def ingest_month(cfg: DataConfig, year: int, month: int, specs: list[TableSpec],
             out = month_path(cfg, spec.name, year, month)
             out.parent.mkdir(parents=True, exist_ok=True)
             df.to_parquet(out, index=False)
+            for f in (cfg.data_root / "features").glob("*.npz"):  # features were built from the old data
+                f.unlink(missing_ok=True)
             written[spec.name] = len(df)
             if not keep_raw:
                 for p in paths:
@@ -67,14 +69,12 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--start", default=cfg.start)
     ap.add_argument("--end", default=cfg.end)
     ap.add_argument("--tables", nargs="*", default=list(TABLES), choices=list(TABLES))
-    ap.add_argument("--region", default=cfg.region)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--force", action="store_true", help="re-clean months that already exist")
     ap.add_argument("--drop-raw", action="store_true", help="delete raw zips after cleaning")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    cfg = cfg.model_copy(update={"region": args.region})
     specs = [TABLES[t] for t in args.tables]
     failures = []
     with ProcessPoolExecutor(max_workers=args.workers) as pool:

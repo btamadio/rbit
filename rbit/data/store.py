@@ -27,10 +27,6 @@ def missing_months(cfg: DataConfig) -> dict[str, list[str]]:
     return {t: sorted(p.stem for p in table_dir(cfg, t).glob("*.missing")) for t in TABLES}
 
 
-def available_tables(cfg: DataConfig) -> list[str]:
-    return [t for t in TABLES if any(table_dir(cfg, t).glob("*.parquet"))]
-
-
 def load(cfg: DataConfig, table: str, start: str | pd.Timestamp | None = None,
          end: str | pd.Timestamp | None = None) -> pd.DataFrame:
     """Load a table, optionally restricted to start <= interval_end < end.
@@ -47,11 +43,3 @@ def load(cfg: DataConfig, table: str, start: str | pd.Timestamp | None = None,
     with duckdb.connect() as con:
         df = con.execute(sql).df()
     return dedup(df, TABLES[table].key).sort_values(list(TABLES[table].key)).reset_index(drop=True)
-
-
-def connect(cfg: DataConfig) -> duckdb.DuckDBPyConnection:
-    """DuckDB connection with one view per available cleaned table."""
-    con = duckdb.connect()
-    for t in available_tables(cfg):
-        con.execute(f"CREATE VIEW {t} AS SELECT * FROM read_parquet('{table_dir(cfg, t) / '*.parquet'}')")
-    return con

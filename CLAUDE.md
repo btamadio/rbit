@@ -11,3 +11,13 @@ Battery arbitrage backtests on the NEM (NSW1): benchmarks, MPC and RL, settled e
 - **Issue tracker:** GitHub Issues on `btamadio/rbit`. See [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md).
 - **Triage labels:** `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See [docs/agents/triage-labels.md](docs/agents/triage-labels.md).
 - **Domain docs:** single-context, `GLOSSARY.md` and `docs/adr/` at the repo root, created lazily. See [docs/agents/domain.md](docs/agents/domain.md).
+
+## Session Hygiene
+- **At session start:** Read `LEARNINGS.md` and review key project gotchas.
+- **Before closing any task:** Update `LEARNINGS.md` with:
+  - Specific mistakes made and how they were solved
+  - Codebase patterns or triggers discovered
+  - Library or tool quirks
+
+## Workflow
+- After opening a PR, always run the /code-review skill immediately.
